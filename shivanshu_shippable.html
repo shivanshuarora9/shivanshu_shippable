@@ -72,6 +72,9 @@ $(document).ready(function(){
 								
 									
 						for(issue_iterator=0;issue_iterator<json_response.length;issue_iterator++) {
+							if(json_response[issue_iterator]['pull_request'] != undefined) {
+								continue;
+							}
 							if(Date.parse(json_response[issue_iterator]['created_at']) >= Date.parse(iso_time_yesterday)) {
 								open_issues_last24hrs++;
 							}
@@ -79,6 +82,9 @@ $(document).ready(function(){
 									
 									
 						for(issue_iterator=0;issue_iterator<json_response.length;issue_iterator++) {
+							if(json_response[issue_iterator]['pull_request'] != undefined) {
+								continue;
+							}
 							if(Date.parse(json_response[issue_iterator]['created_at']) >= Date.parse(iso_time_7daysago)) {
 								open_issues_7days++;
 							}
