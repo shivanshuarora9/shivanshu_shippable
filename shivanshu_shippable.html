@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+    $("#getrepoinfo").click(function(){
+		
+		$.ajaxSetup({
+			async: false
+		});
+
+		/* Clear the contents being displayed */
+		$('#fetching_pages').html("");	
+		$('#issues_total').html("");						
+		$('#issues_last24hours').html("");
+		$('#issues_prevday_7days').html("");
+		$('#issues_morethan_7days').html("");
+		$('#error').html("");
+		
+		
+
+		var open_issues_last24hrs = 0;
+		var open_issues_7days = 0;
+		var total_open_issues = 0;
+        var repo_link = $('#github_repo_link').val();
+		var issue_iterator = 0;
+		var total_issues_count = 0;
+		var page_iterator =0;
+							
+		var time_yesterday = new Date();
+		time_yesterday.setDate(time_yesterday.getDate() - 1);
+		var iso_time_yesterday = time_yesterday.toISOString();
+							
+		var time_7daysago = new Date();
+		time_7daysago.setDate(time_7daysago.getDate() - 7);
+		var iso_time_7daysago = time_7daysago.toISOString();
+		
+		
+		repo_link = repo_link.split('/')
+		var requri = 'https://api.github.com/repos/'+repo_link[3] + "/" + repo_link[4] + "/" + "issues" + "?state=open" + "&since=" + "1970-01-31T18:30:00.000Z";
+
+		/* Check whether it is a valid url or not, if it is, then calculate the issues */
+		
+		if( (repo_link[0] != "https:" || repo_link[2] != "github.com")) {
+			$('#error').html("enter a valid url");
+		}
+		else {
+			$('#fetching_pages').html("Fetching data from pages....");
+			$.getJSON(requri,function(json,status,xhr) {
+				var response = xhr.getResponseHeader('Link');
+				var index_1 = response.indexOf(">; rel=\"last\"");
+				var index_2 = response.lastIndexOf("page=");
+				var total_pages = response.slice((index_2)+5,index_1);
+				total_issues_count = 0;
+							
+					/* iterate through every page and check for the created_at timestamp of every issue */		
+							
+				for(page_iterator=1;page_iterator<=parseInt(total_pages);page_iterator++) {
+					requri =  'https://api.github.com/repos/'+repo_link[3] + "/" + repo_link[4] + "/" + "issues" + "?state=open" + "&since=" + "1970-01-01T00:00:00Z" + "&page=" + page_iterator;
+												
+					$.getJSON(requri,function(json_response) {
+						total_issues_count = json_response.length;
+								
+						/* Subtracting the pull requests issues from the total issues */
+						for(issue_iterator=0;issue_iterator<json_response.length;issue_iterator++) {
+							if(json_response[issue_iterator]['pull_request'] != undefined) {
+								total_issues_count--;
+							}
+						}
+						total_open_issues = total_open_issues + total_issues_count;
+								
+									
+						for(issue_iterator=0;issue_iterator<json_response.length;issue_iterator++) {
+							if(Date.parse(json_response[issue_iterator]['created_at']) >= Date.parse(iso_time_yesterday)) {
+								open_issues_last24hrs++;
+							}
+						}
+									
+									
+						for(issue_iterator=0;issue_iterator<json_response.length;issue_iterator++) {
+							if(Date.parse(json_response[issue_iterator]['created_at']) >= Date.parse(iso_time_7daysago)) {
+								open_issues_7days++;
+							}
+						}
+									
+
+					})							
+				}
+	
+				$('#issues_total').html("Total number of open issues  :" + total_open_issues);	
+							
+				$('#issues_last24hours').html("Total number of open issues since last 24 hrs  :" + open_issues_last24hrs);
+
+				$('#issues_prevday_7days').html("Total number of open issues opened more than 24 hours ago but less than 7 days ago  :" + (open_issues_7days-open_issues_last24hrs));
+
+				$('#issues_morethan_7days').html("Number of open issues that were opened more than 7 days ago  :" + (total_open_issues - open_issues_7days));
+
+			})
+		}
+		
+		$.ajaxSetup({
+			async: true
+		});
+		
+    });
+});
+
+
+</script>
+</head>
+<body>
+
+<h2>Github question</h2>
+
+<p>Enter a public repo link</p>
+<input type="text" id="github_repo_link">
+<button id="getrepoinfo">Submit</button>
+
+<div id="fetching_pages"></div>
+
+<div id="issues_total"></div>
+<br>
+<div id="issues_last24hours"></div>
+<br>
+<div id="issues_prevday_7days"></div>
+<br>
+<div id="issues_morethan_7days"></div>
+<br>
+<div id="error"></div>
+</body>
+</html>
